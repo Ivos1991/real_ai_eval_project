@@ -73,6 +73,8 @@ Mock rubric metric:
 
 The harness avoids brittle exact-only assertions by using normalized matching, a total-score threshold, citation similarity thresholds, confidence checks, and rubric scoring. Critical deterministic metrics still fail the test immediately because schema validity, null handling, and grounded correctness are release-blocking for this field.
 
+Expected field values are normalized to ISO date format for scoring. Citation text intentionally preserves the original source wording and date format from the fabricated document, including scanned-text recognition errors where relevant.
+
 ## CI Usage
 
 Pytest acts as the quality gate. A failing critical metric, failing mock judge, or total score below the configured threshold causes a non-zero pytest exit code.

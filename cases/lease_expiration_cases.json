@@ -81,7 +81,7 @@
     "expected_outcome_label": "the expiration date from scanned text to be extracted",
     "expected_outcome_slug": "scanned_text_date_extracted",
     "expected_behavior": "Tolerate scanning-related text errors around the label and extract the readable expiration date.",
-    "notes": "Represents a scanned lease where text recognition changed some letters or numbers."
+    "notes": "Represents a scanned lease where text recognition changed some letters or numbers. The spellings Lea5e and Exp1ration are intentional recognition errors."
   },
   {
     "id": "lease_adversarial_008",
