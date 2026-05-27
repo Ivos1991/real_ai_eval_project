@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run eval quality gate
-        run: pytest --alluredir=reports/allure-results --clean-alluredir
+        run: pytest -m eval --alluredir=reports/allure-results --clean-alluredir
         env:
           EVAL_TRACE_EVIDENCE_MODE: failure_only
       - name: Upload reports

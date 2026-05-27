@@ -1,6 +1,7 @@
 """OpenTelemetry setup for local console tracing and Allure trace evidence."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from threading import Lock
 from typing import Any
 
@@ -61,14 +62,24 @@ def get_trace_spans(trace_id: str) -> list[dict[str, Any]]:
 
 def span_to_dict(span: ReadableSpan) -> dict[str, Any]:
     parent_span_id = f"{span.parent.span_id:016x}" if span.parent else None
+    start_time = span.start_time or 0
+    end_time = span.end_time or 0
     return {
         "name": span.name,
         "trace_id": f"{span.context.trace_id:032x}",
         "span_id": f"{span.context.span_id:016x}",
         "parent_span_id": parent_span_id,
-        "start_time_unix_nano": span.start_time,
-        "end_time_unix_nano": span.end_time,
-        "duration_ms": round(((span.end_time or 0) - (span.start_time or 0)) / 1_000_000, 3),
+        "start_time": _iso_from_unix_nano(start_time),
+        "end_time": _iso_from_unix_nano(end_time),
+        "start_time_unix_nano": start_time,
+        "end_time_unix_nano": end_time,
+        "duration_ms": round((end_time - start_time) / 1_000_000, 3),
         "attributes": dict(span.attributes or {}),
         "status": span.status.status_code.name,
     }
+
+
+def _iso_from_unix_nano(value: int) -> str:
+    if value <= 0:
+        return ""
+    return datetime.fromtimestamp(value / 1_000_000_000, tz=UTC).isoformat().replace("+00:00", "Z")

@@ -39,6 +39,8 @@ class EvalSettings:
     cases_path: Path
     total_score_threshold: float
     citation_similarity_threshold: float
+    deterministic_score_weight: float
+    judge_score_weight: float
 
 
 @dataclass(slots=True)
@@ -82,6 +84,8 @@ class Settings:
                 cases_path=Path(os.getenv("EVAL_CASES_PATH", "cases/lease_expiration_cases.json")),
                 total_score_threshold=float(os.getenv("EVAL_TOTAL_SCORE_THRESHOLD", "0.80")),
                 citation_similarity_threshold=float(os.getenv("EVAL_CITATION_SIMILARITY_THRESHOLD", "80")),
+                deterministic_score_weight=float(os.getenv("EVAL_DETERMINISTIC_SCORE_WEIGHT", "0.70")),
+                judge_score_weight=float(os.getenv("EVAL_JUDGE_SCORE_WEIGHT", "0.30")),
             ),
             reporting=ReportingSettings(report_dir=Path(os.getenv("EVAL_REPORT_DIR", "reports"))),
             tracing=TracingSettings(
