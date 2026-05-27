@@ -1,10 +1,13 @@
+"""Small Allure attachment helpers shared by eval tests."""
+
 import json
 from pathlib import Path
+from typing import Any
 
 import allure
 
 
-def attach_json(name: str, payload: object) -> None:
+def attach_json(name: str, payload: Any) -> None:
     allure.attach(
         json.dumps(payload, indent=2, sort_keys=True, default=str),
         name=name,

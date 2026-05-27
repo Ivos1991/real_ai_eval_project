@@ -1,122 +1,120 @@
-# DSMP Full-Stack Automation Framework
+# REAL.dev AI Evaluation Harness
 
-Production-grade Python automation framework for UI and API validation. The project keeps the original Cyera assignment scenarios intact while refactoring the internals around dependency injection, hooks, plugins, and typed configuration.
+This repository is a small runnable home-assignment project for the REAL.dev AI Evaluation Engineer role. It implements Option B: a local eval harness for a Data Field extraction use case.
 
-## What Changed
+The selected field is `Lease Expiration Date` from commercial real estate lease text.
 
-- Added a lightweight DI container with singleton and factory lifecycles.
-- Added a typed lifecycle hook bus for session, test, step, failure, and API events.
-- Added import-discovered plugins with config-based enable/disable.
-- Reworked settings into nested typed dataclasses loaded from `.env` and environment variables.
-- Introduced workflow orchestrators and page factories to reduce duplication across tests.
-- Added framework-level unit tests plus CI steps for linting, type checking, and architecture validation.
+## Assignment Alignment
 
-## Repository Layout
+Selected option: **Option B - Build a tiny runnable eval harness**.
+
+Selected REAL feature: **Data Field**. Option B does not repeat "choose one feature" as explicitly as Options A and C, but the assignment frames all options around REAL's listed features. This harness uses Data Field because structured extraction is a practical fit for deterministic checks plus judgment-style evaluation.
+
+Requirement coverage:
+
+- Loads a small fabricated dataset: 8 lease-expiration cases in `cases/lease_expiration_cases.json`.
+- Runs a mock system-under-test: `MockLeaseExpirationExtractor`.
+- Scores with rule-based metrics: schema, normalized value, citation, null handling, and confidence checks.
+- Scores with an LLM-as-judge style metric: `MockLLMJudge`, implemented locally with a transparent rubric and no external calls.
+- Outputs a CI-friendly pass/fail signal: pytest fails on critical metric failures or low total score.
+- Produces reports: Allure evidence plus `reports/eval_summary.json` and `reports/eval_summary.csv`.
+- Includes lightweight observability: OpenTelemetry spans, with optional trace evidence attached to Allure.
+- Documents next steps: see Production Evolution below.
+
+## Problem Framing
+
+AI systems are not well covered by exact assertions alone. A final answer can be formatted differently, supported by weak citations, valid but uncertain, or correct only because it guessed. Useful evaluation needs measurable quality signals around correctness, grounding, schema validity, ambiguity handling, and regression detection.
+
+## Why Data Field Extraction
+
+Data Field extraction is structured enough to support deterministic checks, but still realistic for non-deterministic AI behavior. The harness combines normalized date matching and schema checks with a rubric-style judge that looks at grounding, reasoning quality, ambiguity handling, and hallucination risk.
+
+## Architecture
 
 ```text
-.
-|-- api
-|-- config
-|-- core
-|   |-- framework
-|   |-- orchestrators
-|   |-- plugins
-|   |-- core_utils
-|   `-- testing_utils
-|-- docs
-|-- tests
-|   |-- api
-|   |-- framework
-|   `-- ui
-|-- ui
-|   |-- actions
-|   |-- pages
-|   `-- page_factory.py
-`-- .github/workflows
+cases/lease_expiration_cases.json
+        |
+        v
+LeaseExpirationCaseLoader
+        |
+        v
+MockLeaseExpirationExtractor  <---- api/ExtractionApiClient boundary for future real API calls
+        |
+        v
+RuleBasedEvaluator + MockLLMJudge
+        |
+        v
+pytest quality gate + Allure attachments
+        |
+        v
+reports/eval_summary.json and reports/eval_summary.csv
 ```
 
-## Setup
+OpenTelemetry spans wrap case loading, mock extraction, the optional API client boundary, deterministic scoring, mock judge scoring, and report generation. The default exporter writes traces to the console. The harness can also attach per-case trace evidence to Allure.
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-python -m pip install --upgrade pip
-python -m pip install -e .[dev]
-python -m playwright install chromium
+## Metrics
+
+Deterministic metrics:
+
+- `schema_validity`: validates the extraction result against a Pydantic schema.
+- `exact_or_normalized_value_match`: compares expected and actual dates after normalization.
+- `citation_present`: requires citations for non-null answers and no citations for null answers.
+- `citation_supports_answer`: uses RapidFuzz to check that the citation supports the expected clause.
+- `expected_null_handling`: checks missing or irrelevant documents return null with low confidence.
+- `confidence_range_valid`: ensures confidence is between 0 and 1.
+
+Mock rubric metric:
+
+- `MockLLMJudge` is a local rubric simulator, not a real LLM call.
+- It scores groundedness, reasoning quality, ambiguity handling, and hallucination risk.
+- In production this interface could be replaced by LangSmith, Braintrust, DeepEval, Ragas, Phoenix, or a custom LLM judge service.
+
+## Handling Non-Determinism
+
+The harness avoids brittle exact-only assertions by using normalized matching, a total-score threshold, citation similarity thresholds, confidence checks, and rubric scoring. Critical deterministic metrics still fail the test immediately because schema validity, null handling, and grounded correctness are release-blocking for this field.
+
+## CI Usage
+
+Pytest acts as the quality gate. A failing critical metric, failing mock judge, or total score below the configured threshold causes a non-zero pytest exit code.
+
+```powershell
+pip install -r requirements.txt
+pytest
+pytest --alluredir=reports/allure-results --clean-alluredir
+allure serve reports/allure-results
 ```
 
-Copy `.env.example` to `.env` when running locally.
+Trace evidence mode is controlled by `EVAL_TRACE_EVIDENCE_MODE`:
 
-## Configuration
+- `failure_only` attaches per-case OpenTelemetry spans only for failed eval cases. This is the default and the CI setting.
+- `always` attaches trace JSON for every case, useful for local review.
+- `off` disables Allure trace attachments while keeping normal tracing available.
 
-Core settings are loaded by `Settings.from_env()` and grouped by responsibility:
+Local example:
 
-- `urls`
-- `credentials`
-- `browser`
-- `timeouts`
-- `retries`
-- `reporting`
-- `plugins`
-- `runtime`
-
-Evidence modes:
-
-- `off`
-- `failure_only`
-- `full_evidence`
-
-Compatibility aliases `on_failure` and `always` are still accepted.
-
-## Running Tests
-
-Framework unit tests:
-
-```bash
-.venv\Scripts\python -m pytest tests\framework -q
+```powershell
+$env:EVAL_TRACE_EVIDENCE_MODE="always"
+pytest --alluredir=reports/allure-results --clean-alluredir
+allure serve reports/allure-results
 ```
 
-API tests:
+Summary files are written to:
 
-```bash
-.venv\Scripts\python -m pytest tests\api -m api -q -rs --alluredir artifacts\allure-results
+```text
+reports/eval_summary.json
+reports/eval_summary.csv
 ```
 
-UI tests:
+## Why `requests`
 
-```bash
-.venv\Scripts\python -m pytest tests\ui -m ui -q -rs --alluredir artifacts\allure-results
-```
+The current system under test is local and mocked so the project runs without API keys. The `api/ExtractionApiClient` class shows the production boundary where `requests` can call a real extraction endpoint later. In production this client should add retries, timeouts, auth, richer error handling, and possibly `httpx` if async support is required.
 
-Full suite:
+## Production Evolution
 
-```bash
-.venv\Scripts\python -m pytest -q -rs --alluredir artifacts\allure-results
-```
-
-## CI/CD
-
-`ci.yml` now runs:
-
-- Ruff linting
-- MyPy type checking
-- framework unit tests
-- selected E2E/API/UI suite
-- Allure artifact generation and upload
-- optional GitHub Pages publication for the latest report
-
-## Extension Points
-
-- Plugins: `core/plugins/builtin`
-- Hook contracts: `core/framework/hooks.py`
-- DI registrations: `core/framework/runtime.py`
-- Orchestrators: `core/orchestrators`
-- Page factories: `ui/page_factory.py`
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [Plugin System](docs/plugin-system.md)
-- [Hooks](docs/hooks.md)
-- [Dependency Injection](docs/dependency-injection.md)
-- [Extensibility](docs/extensibility.md)
+- Replace `MockLeaseExpirationExtractor` with a real REAL API call.
+- Replace `MockLLMJudge` with LangSmith, Braintrust, DeepEval, Ragas, Phoenix, or a custom judge.
+- Build golden datasets from expert-reviewed lease cases.
+- Add baseline comparisons such as this week versus last week.
+- Add a human-in-the-loop feedback loop from lawyers, accountants, and architects.
+- Track traces with OpenTelemetry plus Phoenix, LangSmith, or another observability backend.
+- Add cost and latency monitoring per extraction and per eval run.

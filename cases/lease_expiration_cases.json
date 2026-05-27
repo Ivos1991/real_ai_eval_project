@@ -1,0 +1,82 @@
+[
+  {
+    "id": "lease_clear_001",
+    "title": "Clear lease expiration date",
+    "severity": "critical",
+    "document_text": "LEASE AGREEMENT\nTenant: Northstar Retail LLC\nPremises: 120 Market Street\nThe lease commencement date is January 1, 2025.\nThe Lease Expiration Date is December 31, 2030 unless earlier terminated under Section 18.",
+    "expected_value": "2030-12-31",
+    "expected_citation_text": "The Lease Expiration Date is December 31, 2030 unless earlier terminated under Section 18.",
+    "expected_behavior": "Extract the clear stated lease expiration date.",
+    "notes": "Happy path with an explicit field label."
+  },
+  {
+    "id": "lease_formats_002",
+    "title": "Date appears in multiple formats",
+    "severity": "normal",
+    "document_text": "BASIC LEASE INFORMATION\nOriginal term starts: 04/01/2024.\nRent schedule generated on 2024-04-01.\nFor avoidance of doubt, the expiration date for the lease is 03/31/2029.",
+    "expected_value": "2029-03-31",
+    "expected_citation_text": "For avoidance of doubt, the expiration date for the lease is 03/31/2029.",
+    "expected_behavior": "Normalize slash-formatted dates and avoid non-expiration dates.",
+    "notes": "Tests normalization and date-role discrimination."
+  },
+  {
+    "id": "lease_amendment_003",
+    "title": "Amendment overrides original lease date",
+    "severity": "critical",
+    "document_text": "ORIGINAL LEASE\nThe initial lease expiration date was June 30, 2028.\nFIRST AMENDMENT\nThis Amendment overrides the original term. The controlling expiration date is September 30, 2031.",
+    "expected_value": "2031-09-30",
+    "expected_citation_text": "This Amendment overrides the original term. The controlling expiration date is September 30, 2031.",
+    "expected_behavior": "Use the amendment date because it overrides the original lease.",
+    "notes": "Regression-prone because retrieval may surface the older lease first."
+  },
+  {
+    "id": "lease_missing_004",
+    "title": "Missing expiration date",
+    "severity": "critical",
+    "document_text": "SHORT FORM LEASE\nThe tenant may occupy Suite 400 starting May 1, 2026.\nThe agreement is month-to-month with no stated expiration date.",
+    "expected_value": null,
+    "expected_citation_text": null,
+    "expected_behavior": "Return null with low confidence when no fixed expiration date exists.",
+    "notes": "Null handling should avoid hallucinating an end date."
+  },
+  {
+    "id": "lease_conflicting_005",
+    "title": "Conflicting dates",
+    "severity": "critical",
+    "document_text": "LEASE ABSTRACT - CONFLICTING DATES\nSummary table lists expiration date as December 31, 2027.\nNarrative note: verify before closing because a later extension may exist.\nFinal signed amendment: the Lease Expiration Date is December 31, 2028.",
+    "expected_value": "2028-12-31",
+    "expected_citation_text": "Final signed amendment: the Lease Expiration Date is December 31, 2028.",
+    "expected_behavior": "Handle conflicting dates by selecting the final signed amendment.",
+    "notes": "Tests ambiguity handling and grounding."
+  },
+  {
+    "id": "lease_irrelevant_006",
+    "title": "Irrelevant document",
+    "severity": "normal",
+    "document_text": "MAINTENANCE SCHEDULE\nThis is not a lease. HVAC service is due on August 15, 2027. Cleaning contract renews annually.",
+    "expected_value": null,
+    "expected_citation_text": null,
+    "expected_behavior": "Return null because the document is not a lease.",
+    "notes": "Prevents extracting random dates from irrelevant documents."
+  },
+  {
+    "id": "lease_ocr_noise_007",
+    "title": "Scanned lease text has recognition errors",
+    "severity": "normal",
+    "document_text": "LEASE OCR TEXT\nTennant: Harbor Works\nThe initia1 term shal1 run through noisy scans.\nLea5e Exp1ration Date: November 30, 2032.\nSome characters are misread but the date line remains readable.",
+    "expected_value": "2032-11-30",
+    "expected_citation_text": "Lea5e Exp1ration Date: November 30, 2032.",
+    "expected_behavior": "Tolerate scanning-related text errors around the label and extract the readable expiration date.",
+    "notes": "Represents a scanned lease where text recognition changed some letters or numbers."
+  },
+  {
+    "id": "lease_adversarial_008",
+    "title": "Document includes a date that should be ignored",
+    "severity": "critical",
+    "document_text": "LEASE REVIEW MEMO\nTraining example: do not use this date, January 1, 2099, because it is not the lease expiration.\nActual clause: the controlling expiration date is July 31, 2033.",
+    "expected_value": "2033-07-31",
+    "expected_citation_text": "Actual clause: the controlling expiration date is July 31, 2033.",
+    "expected_behavior": "Ignore the date that the document explicitly says not to use and extract the actual controlling clause.",
+    "notes": "Checks that the system does not extract a nearby date just because it appears in the document."
+  }
+]

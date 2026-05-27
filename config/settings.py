@@ -1,12 +1,13 @@
-"""Strongly typed framework settings loaded from environment variables."""
+"""Typed runtime settings for the local eval harness."""
 
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 
-from core.framework.types import Environment, EvidenceMode
+TraceEvidenceMode = Literal["always", "failure_only", "off"]
 
 
 def _to_bool(value: str | None, default: bool) -> bool:
@@ -15,205 +16,81 @@ def _to_bool(value: str | None, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _csv(value: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
-    if value is None:
-        return default
-    return tuple(item.strip() for item in value.split(",") if item.strip()) or default
-
-
-def _resolve_evidence_mode(value: str | None) -> EvidenceMode:
+def _trace_evidence_mode(value: str | None) -> TraceEvidenceMode:
     raw = (value or "failure_only").strip().lower()
     aliases = {
-        "on_failure": "failure_only",
-        "always": "full_evidence",
-        "off": "off",
+        "always": "always",
+        "all": "always",
+        "failure": "failure_only",
+        "failures": "failure_only",
         "failure_only": "failure_only",
-        "full_evidence": "full_evidence",
+        "on_failure": "failure_only",
+        "off": "off",
+        "none": "off",
     }
     try:
         return aliases[raw]  # type: ignore[return-value]
     except KeyError as error:
-        raise ValueError(
-            "BROWSER_EVIDENCE_MODE must be one of: off, on_failure, always, failure_only, full_evidence"
-        ) from error
+        raise ValueError("EVAL_TRACE_EVIDENCE_MODE must be one of: always, failure_only, off") from error
 
 
 @dataclass(slots=True)
-class UrlSettings:
-    web_base_url: str
-    api_base_url: str
-
-
-@dataclass(slots=True)
-class CredentialsSettings:
-    username: str
-    password: str
-
-
-@dataclass(slots=True)
-class BrowserSettings:
-    headless: bool
-    slow_mo_ms: int
-    ignore_https_errors: bool
-
-
-@dataclass(slots=True)
-class TimeoutSettings:
-    request_timeout_seconds: float
-    poll_timeout_seconds: float
-    poll_interval_seconds: float
-
-
-@dataclass(slots=True)
-class RetrySettings:
-    attempts: int
-    delay_seconds: float
+class EvalSettings:
+    cases_path: Path
+    total_score_threshold: float
+    citation_similarity_threshold: float
 
 
 @dataclass(slots=True)
 class ReportingSettings:
-    evidence_mode: EvidenceMode
-    artifact_dir: Path
+    report_dir: Path
 
     @property
-    def allure_results_dir(self) -> Path:
-        return self.artifact_dir / "allure-results"
+    def summary_json_path(self) -> Path:
+        return self.report_dir / "eval_summary.json"
 
     @property
-    def log_dir(self) -> Path:
-        return self.artifact_dir / "logs"
-
-    @property
-    def allure_report_dir(self) -> Path:
-        return self.artifact_dir / "allure-report"
-
-    @property
-    def playwright_output_dir(self) -> Path:
-        return self.artifact_dir / "playwright"
+    def summary_csv_path(self) -> Path:
+        return self.report_dir / "eval_summary.csv"
 
 
 @dataclass(slots=True)
-class PluginSettings:
-    enabled: tuple[str, ...]
+class TracingSettings:
+    service_name: str
+    console_exporter_enabled: bool
+    evidence_mode: TraceEvidenceMode
 
 
 @dataclass(slots=True)
-class RuntimeSettings:
-    environment: Environment
-    log_level: str
+class ApiSettings:
+    extraction_endpoint: str
+    request_timeout_seconds: float
 
 
 @dataclass(slots=True)
 class Settings:
-    """Strongly typed settings root for the automation framework."""
-
-    urls: UrlSettings
-    credentials: CredentialsSettings
-    browser: BrowserSettings
-    timeouts: TimeoutSettings
-    retries: RetrySettings
+    eval: EvalSettings
     reporting: ReportingSettings
-    plugins: PluginSettings
-    runtime: RuntimeSettings
-
-    @property
-    def web_base_url(self) -> str:
-        return self.urls.web_base_url
-
-    @property
-    def api_base_url(self) -> str:
-        return self.urls.api_base_url
-
-    @property
-    def username(self) -> str:
-        return self.credentials.username
-
-    @property
-    def password(self) -> str:
-        return self.credentials.password
-
-    @property
-    def request_timeout_seconds(self) -> float:
-        return self.timeouts.request_timeout_seconds
-
-    @property
-    def poll_timeout_seconds(self) -> float:
-        return self.timeouts.poll_timeout_seconds
-
-    @property
-    def poll_interval_seconds(self) -> float:
-        return self.timeouts.poll_interval_seconds
-
-    @property
-    def headless(self) -> bool:
-        return self.browser.headless
-
-    @property
-    def slow_mo_ms(self) -> int:
-        return self.browser.slow_mo_ms
-
-    @property
-    def browser_evidence_mode(self) -> EvidenceMode:
-        return self.reporting.evidence_mode
-
-    @property
-    def artifact_dir(self) -> Path:
-        return self.reporting.artifact_dir
-
-    @property
-    def allure_results_dir(self) -> Path:
-        return self.reporting.allure_results_dir
-
-    @property
-    def log_dir(self) -> Path:
-        return self.reporting.log_dir
-
-    @property
-    def allure_report_dir(self) -> Path:
-        return self.reporting.allure_report_dir
-
-    @property
-    def playwright_output_dir(self) -> Path:
-        return self.reporting.playwright_output_dir
-
-    @property
-    def log_level(self) -> str:
-        return self.runtime.log_level
+    tracing: TracingSettings
+    api: ApiSettings
 
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()
-        artifact_dir = Path(os.getenv("ARTIFACT_DIR", "artifacts"))
         return cls(
-            urls=UrlSettings(
-                web_base_url=os.getenv("WEB_BASE_URL", "http://localhost:3000"),
-                api_base_url=os.getenv("API_BASE_URL", "http://localhost:8080/api"),
+            eval=EvalSettings(
+                cases_path=Path(os.getenv("EVAL_CASES_PATH", "cases/lease_expiration_cases.json")),
+                total_score_threshold=float(os.getenv("EVAL_TOTAL_SCORE_THRESHOLD", "0.80")),
+                citation_similarity_threshold=float(os.getenv("EVAL_CITATION_SIMILARITY_THRESHOLD", "80")),
             ),
-            credentials=CredentialsSettings(
-                username=os.getenv("APP_USERNAME", "admin"),
-                password=os.getenv("APP_PASSWORD", "Aa123456"),
+            reporting=ReportingSettings(report_dir=Path(os.getenv("EVAL_REPORT_DIR", "reports"))),
+            tracing=TracingSettings(
+                service_name=os.getenv("OTEL_SERVICE_NAME", "real-ai-eval-harness"),
+                console_exporter_enabled=_to_bool(os.getenv("OTEL_CONSOLE_EXPORTER_ENABLED"), True),
+                evidence_mode=_trace_evidence_mode(os.getenv("EVAL_TRACE_EVIDENCE_MODE")),
             ),
-            browser=BrowserSettings(
-                headless=_to_bool(os.getenv("HEADLESS"), True),
-                slow_mo_ms=int(os.getenv("SLOW_MO_MS", "0")),
-                ignore_https_errors=_to_bool(os.getenv("IGNORE_HTTPS_ERRORS"), True),
-            ),
-            timeouts=TimeoutSettings(
-                request_timeout_seconds=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "20")),
-                poll_timeout_seconds=float(os.getenv("POLL_TIMEOUT_SECONDS", "180")),
-                poll_interval_seconds=float(os.getenv("POLL_INTERVAL_SECONDS", "2")),
-            ),
-            retries=RetrySettings(
-                attempts=int(os.getenv("RETRY_ATTEMPTS", "3")),
-                delay_seconds=float(os.getenv("RETRY_DELAY_SECONDS", "1")),
-            ),
-            reporting=ReportingSettings(
-                evidence_mode=_resolve_evidence_mode(os.getenv("BROWSER_EVIDENCE_MODE")),
-                artifact_dir=artifact_dir,
-            ),
-            plugins=PluginSettings(enabled=_csv(os.getenv("ENABLED_PLUGINS"), ("session_logger", "allure_evidence"))),
-            runtime=RuntimeSettings(
-                environment=Environment(os.getenv("FRAMEWORK_ENV", "local").strip().lower()),
-                log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
+            api=ApiSettings(
+                extraction_endpoint=os.getenv("EXTRACTION_API_ENDPOINT", "http://localhost:8080/extract"),
+                request_timeout_seconds=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "10")),
             ),
         )
