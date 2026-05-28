@@ -33,6 +33,7 @@ jobs:
     outputs:
       has_allure_results: ${{ steps.detect_allure_results.outputs.has_results }}
       test_suite: ${{ steps.choose_pytest_target.outputs.test_suite }}
+      allure_html_artifact_url: ${{ steps.upload_allure_html_report.outputs.artifact-url }}
     env:
       TEST_SUITE: ${{ github.event.inputs.test_suite || 'all' }}
       EVAL_TRACE_EVIDENCE_MODE: ${{ github.event.inputs.evidence_mode || vars.EVAL_TRACE_EVIDENCE_MODE || 'failure_only' }}
@@ -104,6 +105,7 @@ jobs:
         run: allure generate reports/allure-results --clean --single-file -o reports/allure-report
 
       - name: Upload Allure HTML report
+        id: upload_allure_html_report
         if: always() && steps.detect_allure_results.outputs.has_results == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -140,13 +142,22 @@ jobs:
 
       - name: Publish CI summary
         run: |
+          case "${{ needs.test.result }}" in
+            success) quality_gate_result="passed" ;;
+            failure) quality_gate_result="failed" ;;
+            cancelled) quality_gate_result="cancelled" ;;
+            skipped) quality_gate_result="skipped" ;;
+            *) quality_gate_result="${{ needs.test.result }}" ;;
+          esac
+
           {
             echo "## CI Report Summary"
             echo
             echo "- Test suite: \`${{ needs.test.outputs.test_suite }}\`"
             echo "- Evidence mode: \`${{ github.event.inputs.evidence_mode || vars.EVAL_TRACE_EVIDENCE_MODE || 'failure_only' }}\`"
-            echo "- Allure report: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-            echo "- Artifact backup: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts"
+            echo "- CI quality gate result: \`${quality_gate_result}\`"
+            echo "- Artifact report here: [here](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/)"
+            echo "- Artifact backup artifacts here: [here](${{ needs.test.outputs.allure_html_artifact_url }})"
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish-summary-artifact-only:
@@ -156,11 +167,21 @@ jobs:
     steps:
       - name: Publish CI summary
         run: |
+          case "${{ needs.test.result }}" in
+            success) quality_gate_result="passed" ;;
+            failure) quality_gate_result="failed" ;;
+            cancelled) quality_gate_result="cancelled" ;;
+            skipped) quality_gate_result="skipped" ;;
+            *) quality_gate_result="${{ needs.test.result }}" ;;
+          esac
+
           {
             echo "## CI Report Summary"
             echo
             echo "- Test suite: \`${{ needs.test.outputs.test_suite }}\`"
             echo "- Evidence mode: \`${{ github.event.inputs.evidence_mode || vars.EVAL_TRACE_EVIDENCE_MODE || 'failure_only' }}\`"
-            echo "- Allure report was uploaded as a workflow artifact."
+            echo "- CI quality gate result: \`${quality_gate_result}\`"
+            echo "- Artifact report here: [here](${{ needs.test.outputs.allure_html_artifact_url }})"
+            echo "- Artifact backup artifacts here: [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)"
             echo "- GitHub Pages deployment is skipped for pull request and non-master push runs."
           } >> "$GITHUB_STEP_SUMMARY"
