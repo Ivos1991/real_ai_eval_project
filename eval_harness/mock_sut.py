@@ -10,6 +10,7 @@ from eval_harness.tracing import get_tracer
 class MockLeaseExpirationExtractor:
     """Deterministic mock that simulates useful and explainable AI extraction behavior."""
 
+    # Extracts a lease expiration value, confidence, citation, and reasoning from document text.
     def extract(self, document_text: str) -> ExtractionResult:
         with get_tracer().start_as_current_span("mock_sut.extract_lease_expiration") as span:
             span.set_attribute("document.length", len(document_text))
@@ -57,6 +58,7 @@ class MockLeaseExpirationExtractor:
                 reasoning=reasoning if value else "No reliable expiration date could be extracted.",
             )
 
+    # Chooses the most authoritative line that contains a candidate expiration date.
     def _select_best_line(self, document_text: str) -> str:
         lines = [line.strip() for line in document_text.splitlines() if line.strip()]
         priority_terms = [
@@ -86,6 +88,7 @@ class MockLeaseExpirationExtractor:
             return ""
         return sorted(scored, key=lambda item: (item[0], item[1]), reverse=True)[0][2]
 
+    # Normalizes candidate dates and returns the latest one as the selected value.
     def _select_best_date(self, dates: list[str]) -> str | None:
         normalized = [date for date in (normalize_date(item) for item in dates) if date is not None]
         if not normalized:

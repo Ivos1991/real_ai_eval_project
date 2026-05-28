@@ -9,6 +9,7 @@ from assertpy import assert_that
 from eval_harness.reporting import EvalReportWriter
 
 
+# Verifies that report generation remains stable when no eval cases ran.
 @pytest.mark.unit
 def test_report_writer_expects_empty_result_set_to_still_write_summary() -> None:
     report_dir = Path("reports/test-report-writer")

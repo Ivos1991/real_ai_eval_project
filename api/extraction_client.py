@@ -11,10 +11,12 @@ from eval_harness.tracing import get_tracer
 class ExtractionApiClient:
     """HTTP client shape that can replace the local mock SUT later."""
 
+    # Stores the endpoint and timeout used by the future extraction API boundary.
     def __init__(self, endpoint: str, timeout_seconds: float) -> None:
         self._endpoint = endpoint
         self._timeout_seconds = timeout_seconds
 
+    # Sends one lease-expiration extraction request and validates the response schema.
     def extract_lease_expiration(self, document_text: str) -> ExtractionResult:
         with get_tracer().start_as_current_span("api.extract_lease_expiration") as span:
             span.set_attribute("http.method", "POST")

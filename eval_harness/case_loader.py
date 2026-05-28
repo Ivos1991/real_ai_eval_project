@@ -11,9 +11,11 @@ MAX_ASSIGNMENT_CASES = 10
 
 
 class LeaseExpirationCaseLoader:
+    # Stores the JSON dataset path used for case loading.
     def __init__(self, path: Path) -> None:
         self._path = path
 
+    # Loads and validates fabricated eval cases from disk.
     def load(self) -> list[EvalCase]:
         with get_tracer().start_as_current_span("cases.load") as span:
             payload = json.loads(self._path.read_text(encoding="utf-8"))

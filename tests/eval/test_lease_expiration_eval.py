@@ -6,6 +6,7 @@ from eval_harness.models import CaseEvaluationResult, EvalCase
 from eval_harness.runner import LeaseExpirationEvalRunner
 
 
+# Runs each fabricated lease-expiration case through the full quality gate.
 @pytest.mark.eval
 def test_lease_expiration_expects_expected_behavior(
     case: EvalCase,

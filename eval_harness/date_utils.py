@@ -30,6 +30,7 @@ DATE_PATTERNS = [
 ]
 
 
+# Converts supported date strings into ISO date format for scoring.
 def normalize_date(value: str | None) -> str | None:
     if value is None:
         return None
@@ -42,6 +43,7 @@ def normalize_date(value: str | None) -> str | None:
     return None
 
 
+# Expands month abbreviations before date parsing.
 def _canonicalize_month_aliases(value: str) -> str:
     cleaned = value.replace(".", "")
     for alias, month in MONTHS.items():
@@ -49,6 +51,7 @@ def _canonicalize_month_aliases(value: str) -> str:
     return cleaned
 
 
+# Finds date-like strings in source text for extraction candidates.
 def candidate_dates(text: str) -> list[str]:
     patterns = [
         r"\b\d{4}-\d{2}-\d{2}\b",

@@ -7,6 +7,7 @@ from eval_harness.evaluators.mock_llm_judge import MockLLMJudge
 from eval_harness.models import EvalCase, ExtractionResult
 
 
+# Verifies that a grounded answer passes the mock judge rubric.
 @pytest.mark.unit
 def test_mock_llm_judge_expects_pass_for_grounded_reasoned_answer() -> None:
     case = EvalCase(
@@ -34,6 +35,7 @@ def test_mock_llm_judge_expects_pass_for_grounded_reasoned_answer() -> None:
     assert_that(judge.score).described_as("mock judge total score").is_greater_than_or_equal_to(0.75)
 
 
+# Verifies that hallucinated null-case answers fail the mock judge rubric.
 @pytest.mark.unit
 def test_mock_llm_judge_expects_fail_when_null_case_hallucinates_value() -> None:
     case = EvalCase(

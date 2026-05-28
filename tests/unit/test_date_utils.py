@@ -6,6 +6,7 @@ from assertpy import assert_that
 from eval_harness.date_utils import normalize_date
 
 
+# Verifies that common September abbreviations normalize to the same ISO date.
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("raw_value", "expected"),

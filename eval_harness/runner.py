@@ -17,12 +17,14 @@ from eval_harness.tracing import get_trace_spans, get_tracer
 class LeaseExpirationEvalRunner:
     """Coordinates extraction, scoring, reporting attachments, and quality-gate assertions."""
 
+    # Wires the mock extractor, deterministic evaluator, and mock judge for a run.
     def __init__(self, extractor: MockLeaseExpirationExtractor, settings: Settings) -> None:
         self._extractor = extractor
         self._settings = settings
         self._rule_evaluator = RuleBasedEvaluator(settings.eval.citation_similarity_threshold)
         self._judge = MockLLMJudge()
 
+    # Executes one eval case end to end and attaches review evidence.
     def run_case(self, case: EvalCase) -> CaseEvaluationResult:
         started_at = time.perf_counter()
         self._set_allure_metadata(case)
@@ -64,24 +66,28 @@ class LeaseExpirationEvalRunner:
 
         return result
 
+    # Runs the mock system under test and records the actual output.
     def extract_value(self, case: EvalCase) -> ExtractionResult:
         with allure.step("Run mock lease-expiration extractor"):
             extraction = self._extractor.extract(case.document_text)
             attach_json("actual_output", extraction.model_dump())
             return extraction
 
+    # Applies deterministic scoring metrics and attaches their results.
     def score_with_rules(self, case: EvalCase, extraction: ExtractionResult) -> list[RuleMetricResult]:
         with allure.step("Score deterministic metrics"):
             metrics = self._rule_evaluator.score(case, extraction)
             attach_json("rule_based_metrics", [metric.model_dump() for metric in metrics])
             return metrics
 
+    # Applies the local mock LLM-judge rubric and attaches its result.
     def score_with_mock_judge(self, case: EvalCase, extraction: ExtractionResult) -> JudgeResult:
         with allure.step("Score mock LLM judge rubric"):
             judge = self._judge.score(case, extraction)
             attach_json("mock_llm_judge", judge.model_dump())
             return judge
 
+    # Combines deterministic and judge scores into the final quality-gate result.
     def build_result(
         self,
         case: EvalCase,
@@ -116,6 +122,7 @@ class LeaseExpirationEvalRunner:
             failed_critical_metrics=failed_critical_metrics,
         )
 
+    # Fails the pytest case when critical metrics, judge status, or total score fail.
     def assert_quality_gate_passed(self, result: CaseEvaluationResult) -> None:
         with allure.step("Assert eval quality gate"):
             assert_that(result.failed_critical_metrics).described_as(
@@ -126,6 +133,7 @@ class LeaseExpirationEvalRunner:
                 self._settings.eval.total_score_threshold
             )
 
+    # Attaches in-memory OpenTelemetry spans according to the evidence mode.
     def attach_trace_evidence(self, case: EvalCase, result: CaseEvaluationResult, trace_id: str) -> None:
         mode = self._settings.tracing.evidence_mode
         should_attach = mode == "always" or (mode == "failure_only" and not result.passed)
@@ -143,12 +151,14 @@ class LeaseExpirationEvalRunner:
                 },
             )
 
+    # Adds readable Allure metadata for the current eval case.
     def _set_allure_metadata(self, case: EvalCase) -> None:
         allure.dynamic.title(case.title)
         allure.dynamic.description(self._allure_description(case))
         allure.dynamic.severity(self._severity_label(case.severity))
         allure.dynamic.parameter("case", f"{case.id}: {case.title}")
 
+    # Builds the long-form Allure case description for domain reviewers.
     def _allure_description(self, case: EvalCase) -> str:
         expected_value = case.expected_value or "No value should be extracted"
         expected_citation = case.expected_citation_text or "No citation should be returned"
@@ -171,6 +181,7 @@ class LeaseExpirationEvalRunner:
             "- Mock judge rubric for grounding, reasoning, ambiguity, and hallucination risk"
         )
 
+    # Builds a plain-text summary of the extraction and scoring outcome.
     def _human_readable_summary(self, case: EvalCase, result: CaseEvaluationResult) -> str:
         status = "PASSED" if result.passed else "FAILED"
         lines = [
@@ -204,6 +215,7 @@ class LeaseExpirationEvalRunner:
             lines.extend(["", "Critical failures:", *[f"- {name}" for name in result.failed_critical_metrics]])
         return "\n".join(lines)
 
+    # Maps case severity strings into Allure severity labels.
     def _severity_label(self, raw: str) -> str:
         mapping = {
             "blocker": allure.severity_level.BLOCKER,

@@ -20,21 +20,26 @@ from opentelemetry.sdk.trace.export import (
 class InMemorySpanExporter(SpanExporter):
     """Stores finished spans so tests can attach a focused trace to Allure."""
 
+    # Initializes thread-safe in-memory span storage.
     def __init__(self) -> None:
         self._spans: list[ReadableSpan] = []
         self._lock = Lock()
 
+    # Stores completed spans emitted by OpenTelemetry.
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         with self._lock:
             self._spans.extend(spans)
         return SpanExportResult.SUCCESS
 
+    # Completes exporter shutdown without external cleanup.
     def shutdown(self) -> None:
         return None
 
+    # Reports that all in-memory spans are already flushed.
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return True
 
+    # Returns serialized spans that belong to one trace ID.
     def spans_for_trace(self, trace_id: str) -> list[dict[str, Any]]:
         with self._lock:
             spans = [
@@ -48,6 +53,7 @@ class InMemorySpanExporter(SpanExporter):
 _memory_exporter = InMemorySpanExporter()
 
 
+# Configures global tracing with in-memory and optional console exporters.
 def configure_tracing(service_name: str, console_exporter_enabled: bool) -> TracerProvider:
     provider = TracerProvider(resource=Resource.create({"service.name": service_name}))
     provider.add_span_processor(SimpleSpanProcessor(_memory_exporter))
@@ -57,14 +63,17 @@ def configure_tracing(service_name: str, console_exporter_enabled: bool) -> Trac
     return provider
 
 
+# Returns the shared tracer used by harness components.
 def get_tracer():
     return trace.get_tracer("real_ai_eval_harness")
 
 
+# Reads serialized trace spans captured by the in-memory exporter.
 def get_trace_spans(trace_id: str) -> list[dict[str, Any]]:
     return _memory_exporter.spans_for_trace(trace_id)
 
 
+# Converts an OpenTelemetry span into JSON-serializable evidence.
 def span_to_dict(span: ReadableSpan) -> dict[str, Any]:
     parent_span_id = f"{span.parent.span_id:016x}" if span.parent else None
     start_time = span.start_time or 0
@@ -84,6 +93,7 @@ def span_to_dict(span: ReadableSpan) -> dict[str, Any]:
     }
 
 
+# Converts nanosecond timestamps into ISO-8601 UTC strings.
 def _iso_from_unix_nano(value: int) -> str:
     if value <= 0:
         return ""

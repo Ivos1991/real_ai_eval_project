@@ -10,9 +10,11 @@ from eval_harness.tracing import get_tracer
 
 
 class EvalReportWriter:
+    # Stores the directory where summary artifacts will be written.
     def __init__(self, report_dir: Path) -> None:
         self._report_dir = report_dir
 
+    # Writes JSON and CSV summaries for the completed eval run.
     def write(self, results: list[CaseEvaluationResult]) -> dict[str, Any]:
         with get_tracer().start_as_current_span("report.generate") as span:
             self._report_dir.mkdir(parents=True, exist_ok=True)
@@ -25,6 +27,7 @@ class EvalReportWriter:
             span.set_attribute("report.csv_path", str(csv_path))
             return summary
 
+    # Serializes nested summary fields safely into a one-row CSV report.
     def _write_summary_csv(self, csv_path: Path, summary: dict[str, Any]) -> None:
         with csv_path.open("w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=list(summary.keys()))
@@ -36,6 +39,7 @@ class EvalReportWriter:
                 }
             )
 
+    # Aggregates case outcomes, scores, durations, and metric pass rates.
     def _build_summary(self, results: list[CaseEvaluationResult]) -> dict[str, Any]:
         total_cases = len(results)
         passed_cases = sum(result.passed for result in results)

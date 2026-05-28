@@ -18,9 +18,11 @@ class RuleBasedEvaluator:
         "confidence_range_valid": "Confidence is within the valid range",
     }
 
+    # Stores the similarity threshold used by citation-support checks.
     def __init__(self, citation_similarity_threshold: float = 80.0) -> None:
         self._citation_similarity_threshold = citation_similarity_threshold
 
+    # Runs all deterministic metrics for one extraction result.
     def score(self, case: EvalCase, extraction: ExtractionResult) -> list[RuleMetricResult]:
         with get_tracer().start_as_current_span("score.rule_based") as span:
             metrics = [
@@ -35,6 +37,7 @@ class RuleBasedEvaluator:
             span.set_attribute("rule_metrics.passed", sum(metric.passed for metric in metrics))
             return metrics
 
+    # Verifies that the extraction still conforms to the Pydantic schema.
     def _schema_validity(self, extraction: ExtractionResult) -> RuleMetricResult:
         try:
             ExtractionResult.model_validate(extraction.model_dump())
@@ -47,6 +50,7 @@ class RuleBasedEvaluator:
                 reason=f"Output schema validation failed: {error}",
             )
 
+    # Compares expected and actual values after date normalization.
     def _value_match(self, case: EvalCase, extraction: ExtractionResult) -> RuleMetricResult:
         expected = normalize_date(case.expected_value)
         actual = normalize_date(extraction.value)
@@ -58,6 +62,7 @@ class RuleBasedEvaluator:
             reason=f"Expected normalized value {expected!r}; got {actual!r}.",
         )
 
+    # Checks whether citations are present only when a value is expected.
     def _citation_present(self, case: EvalCase, extraction: ExtractionResult) -> RuleMetricResult:
         if case.expected_value is None:
             passed = len(extraction.citations) == 0
@@ -67,6 +72,7 @@ class RuleBasedEvaluator:
             reason = "Expected at least one citation for a non-null extraction."
         return self._metric(name="citation_present", passed=passed, score=1.0 if passed else 0.0, reason=reason)
 
+    # Checks that the citation text supports the normalized answer.
     def _citation_supports_answer(self, case: EvalCase, extraction: ExtractionResult) -> RuleMetricResult:
         if case.expected_value is None:
             passed = extraction.value is None
@@ -96,6 +102,7 @@ class RuleBasedEvaluator:
             ),
         )
 
+    # Ensures null cases return no value, low confidence, and no citation.
     def _expected_null_handling(self, case: EvalCase, extraction: ExtractionResult) -> RuleMetricResult:
         if case.expected_value is not None:
             return self._metric(
@@ -114,6 +121,7 @@ class RuleBasedEvaluator:
             reason="Null cases require null value, low confidence, and no fabricated citation.",
         )
 
+    # Ensures the confidence score remains in the valid 0-to-1 range.
     def _confidence_range_valid(self, extraction: ExtractionResult) -> RuleMetricResult:
         passed = 0.0 <= extraction.confidence <= 1.0
         return self._metric(
@@ -123,6 +131,7 @@ class RuleBasedEvaluator:
             reason=f"Confidence={extraction.confidence}.",
         )
 
+    # Builds a consistent deterministic metric result object.
     def _metric(
         self,
         name: str,

@@ -10,6 +10,7 @@ from eval_harness.tracing import get_tracer
 class MockLLMJudge:
     """Simulates LLM-as-judge behavior with transparent local rubric rules."""
 
+    # Scores one extraction with the local mock judge rubric.
     def score(self, case: EvalCase, extraction: ExtractionResult) -> JudgeResult:
         with get_tracer().start_as_current_span("score.mock_llm_judge") as span:
             groundedness = self._groundedness(case, extraction)
@@ -35,6 +36,7 @@ class MockLLMJudge:
                 hallucination_risk=hallucination_risk,
             )
 
+    # Rates whether the answer is supported by the expected citation and value.
     def _groundedness(self, case: EvalCase, extraction: ExtractionResult) -> float:
         if case.expected_value is None:
             return 1.0 if extraction.value is None else 0.0
@@ -49,6 +51,7 @@ class MockLLMJudge:
             return 0.8
         return 0.3
 
+    # Rates whether the reasoning explains the expected case-specific behavior.
     def _reasoning_quality(self, case: EvalCase, extraction: ExtractionResult) -> float:
         reasoning = extraction.reasoning.strip().lower()
         if len(reasoning) < 20:
@@ -58,6 +61,7 @@ class MockLLMJudge:
             return 1.0 if any(term in reasoning for term in special_terms) else 0.7
         return 0.9
 
+    # Rates how well ambiguous, missing, or irrelevant evidence is handled.
     def _ambiguity_handling(self, case: EvalCase, extraction: ExtractionResult) -> float:
         behavior = case.expected_behavior.lower()
         reasoning = extraction.reasoning.lower()
@@ -67,6 +71,7 @@ class MockLLMJudge:
             return 0.5
         return 0.85
 
+    # Rates the risk that the extraction invented an unsupported answer.
     def _hallucination_risk(self, case: EvalCase, extraction: ExtractionResult) -> float:
         if case.expected_value is None:
             return 0.0 if extraction.value is None else 1.0
