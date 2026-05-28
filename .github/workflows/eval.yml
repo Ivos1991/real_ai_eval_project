@@ -99,9 +99,9 @@ jobs:
         if: always() && steps.detect_allure_results.outputs.has_results == 'true'
         run: npm install -g allure-commandline
 
-      - name: Generate Allure HTML report
+      - name: Generate single-file Allure HTML report
         if: always() && steps.detect_allure_results.outputs.has_results == 'true'
-        run: allure generate reports/allure-results --clean -o reports/allure-report
+        run: allure generate reports/allure-results --clean --single-file -o reports/allure-report
 
       - name: Upload Allure HTML report
         if: always() && steps.detect_allure_results.outputs.has_results == 'true'

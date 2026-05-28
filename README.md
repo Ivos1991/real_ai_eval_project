@@ -83,7 +83,7 @@ Pytest acts as the quality gate. A failing critical metric, failing mock judge, 
 python -m pip install -e .[dev]
 python -m pytest
 python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-alluredir
-allure generate reports/allure-results --clean -o reports/allure-report
+allure generate reports/allure-results --clean --single-file -o reports/allure-report
 allure open reports/allure-report
 ```
 
@@ -109,7 +109,7 @@ Local example:
 ```powershell
 $env:EVAL_TRACE_EVIDENCE_MODE="always"
 python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-alluredir
-allure generate reports/allure-results --clean -o reports/allure-report
+allure generate reports/allure-results --clean --single-file -o reports/allure-report
 allure open reports/allure-report
 ```
 
