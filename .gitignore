@@ -11,3 +11,4 @@ reports/*
 artifacts/
 allure-report/
 allure-results/
+docs/
