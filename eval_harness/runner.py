@@ -142,15 +142,17 @@ class LeaseExpirationEvalRunner:
             return
 
         with allure.step("Attach OpenTelemetry trace evidence"):
-            attach_json(
-                f"trace_spans_{case.id}",
-                {
-                    "case_id": case.id,
-                    "trace_id": trace_id,
-                    "evidence_mode": mode,
-                    "spans": get_trace_spans(trace_id),
-                },
-            )
+            telemetry = {
+                "case_id": case.id,
+                "case_title": case.title,
+                "passed": result.passed,
+                "total_score": result.total_score,
+                "duration_ms": result.duration_ms,
+                "trace_id": trace_id,
+                "evidence_mode": mode,
+                "spans": get_trace_spans(trace_id),
+            }
+            attach_json("telemetry", telemetry)
 
     # Adds readable Allure metadata for the current eval case.
     def _set_allure_metadata(self, case: EvalCase) -> None:
