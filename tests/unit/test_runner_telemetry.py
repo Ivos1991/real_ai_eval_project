@@ -35,7 +35,12 @@ def _settings(evidence_mode: str) -> Settings:
 
 
 def _case_result(passed: bool) -> CaseEvaluationResult:
-    extraction = ExtractionResult(value="2028-12-31", confidence=0.95, citations=["Lease Expiration Date"], reasoning="ok")
+    extraction = ExtractionResult(
+        value="2028-12-31",
+        confidence=0.95,
+        citations=["Lease Expiration Date"],
+        reasoning="ok",
+    )
     rule_metric = RuleMetricResult(
         name="schema_validity",
         display_name="Schema validity",
@@ -92,7 +97,10 @@ def test_attach_trace_evidence_adds_telemetry_attachment_for_always_mode(monkeyp
         "eval_harness.runner.attach_json",
         lambda name, payload: attachments.append((name, payload)),
     )
-    monkeypatch.setattr("eval_harness.runner.get_trace_spans", lambda trace_id: [{"trace_id": trace_id, "name": "span"}])
+    monkeypatch.setattr(
+        "eval_harness.runner.get_trace_spans",
+        lambda trace_id: [{"trace_id": trace_id, "name": "span"}],
+    )
 
     runner.attach_trace_evidence(
         case=_case(),
