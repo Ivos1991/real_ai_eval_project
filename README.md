@@ -1,6 +1,6 @@
 # REAL.dev AI Evaluation Harness
 
-This repository is a small runnable home-assignment project for the REAL.dev AI Evaluation Engineer role. It implements Option B: a local eval harness for a Data Field extraction use case.
+This repository is a small runnable local eval harness for a Data Field extraction use case.
 
 The selected field is `Lease Expiration Date` from commercial real estate lease text.
 
@@ -8,7 +8,8 @@ The selected field is `Lease Expiration Date` from commercial real estate lease 
 
 Selected option: **Option B - Build a tiny runnable eval harness**.
 
-Selected REAL feature: **Data Field**. Option B does not repeat "choose one feature" as explicitly as Options A and C, but the assignment frames all options around REAL's listed features. This harness uses Data Field because structured extraction is a practical fit for deterministic checks plus judgment-style evaluation.
+This harness uses Data Field because structured extraction is a practical fit for deterministic checks plus judgment-style evaluation.
+
 
 Requirement coverage:
 
@@ -51,6 +52,11 @@ reports/eval_summary.json and reports/eval_summary.csv
 ```
 
 OpenTelemetry spans wrap case loading, mock extraction, the optional API client boundary, deterministic scoring, mock judge scoring, and report generation. The default exporter writes traces to the console. The harness can also attach per-case trace evidence to Allure.
+
+Tests are split by purpose:
+
+- `tests/eval`: domain-facing eval quality-gate cases.
+- `tests/unit`: focused implementation tests for scoring, normalization, judge behavior, and report writing.
 
 ## Metrics
 
@@ -97,6 +103,13 @@ python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-a
 The GitHub Actions workflow runs all tests on every push and pull request. Manual workflow runs can choose `all`,
 `eval`, or `unit`, and can set the eval trace evidence mode. Generated Allure HTML is always uploaded as a workflow
 artifact. On manual runs and pushes to `master`, the report is also published to GitHub Pages.
+
+The published report uses Allure single-file mode so the GitHub Pages version does not depend on separate runtime JSON
+fetches for individual test details. After a successful Pages deployment, the report is available at:
+
+```text
+https://ivos1991.github.io/real_ai_eval_project/
+```
 
 Trace evidence mode is controlled by `EVAL_TRACE_EVIDENCE_MODE`:
 
