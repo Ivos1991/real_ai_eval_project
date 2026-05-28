@@ -31,8 +31,14 @@ class EvalReportWriter:
         passed_cases = sum(result.passed for result in results)
         failed_cases = total_cases - passed_cases
         average_score = round(sum(result.total_score for result in results) / total_cases, 3) if total_cases else 0.0
+        average_duration_ms = (
+            round(sum(result.duration_ms for result in results) / total_cases, 3) if total_cases else 0.0
+        )
 
         metric_names = sorted({metric.name for result in results for metric in result.rule_metrics})
+        metric_display_names = {
+            metric.name: metric.display_name for result in results for metric in result.rule_metrics
+        }
         metric_pass_rates = {
             metric_name: round(
                 sum(
@@ -53,7 +59,10 @@ class EvalReportWriter:
             "passed_cases": passed_cases,
             "failed_cases": failed_cases,
             "average_score": average_score,
+            "average_duration_ms": average_duration_ms,
             "metric_level_pass_rates": metric_pass_rates,
+            "metric_display_names": metric_display_names,
             "failed_case_ids": [result.case_id for result in results if not result.passed],
             "case_scores": {result.case_id: result.total_score for result in results},
+            "case_durations_ms": {result.case_id: result.duration_ms for result in results},
         }

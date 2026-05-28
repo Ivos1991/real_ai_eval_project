@@ -12,6 +12,8 @@ class EvalCase(BaseModel):
     document_text: str
     expected_value: str | None
     expected_citation_text: str | None
+    expected_outcome_label: str
+    expected_outcome_slug: str
     expected_behavior: str
     notes: str
 
@@ -27,6 +29,7 @@ class ExtractionResult(BaseModel):
 
 class RuleMetricResult(BaseModel):
     name: str
+    display_name: str
     passed: bool
     score: float
     reason: str
@@ -51,5 +54,6 @@ class CaseEvaluationResult(BaseModel):
     rule_metrics: list[RuleMetricResult]
     judge: JudgeResult
     total_score: float
+    duration_ms: float
     passed: bool
     failed_critical_metrics: list[str]

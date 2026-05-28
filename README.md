@@ -73,6 +73,8 @@ Mock rubric metric:
 
 The harness avoids brittle exact-only assertions by using normalized matching, a total-score threshold, citation similarity thresholds, confidence checks, and rubric scoring. Critical deterministic metrics still fail the test immediately because schema validity, null handling, and grounded correctness are release-blocking for this field.
 
+Expected field values are normalized to ISO date format for scoring. Citation text intentionally preserves the original source wording and date format from the fabricated document, including scanned-text recognition errors where relevant.
+
 ## CI Usage
 
 Pytest acts as the quality gate. A failing critical metric, failing mock judge, or total score below the configured threshold causes a non-zero pytest exit code.
@@ -80,7 +82,7 @@ Pytest acts as the quality gate. A failing critical metric, failing mock judge, 
 ```powershell
 pip install -r requirements.txt
 pytest
-pytest --alluredir=reports/allure-results --clean-alluredir
+pytest -m eval --alluredir=reports/allure-results --clean-alluredir
 allure serve reports/allure-results
 ```
 
@@ -94,7 +96,7 @@ Local example:
 
 ```powershell
 $env:EVAL_TRACE_EVIDENCE_MODE="always"
-pytest --alluredir=reports/allure-results --clean-alluredir
+pytest -m eval --alluredir=reports/allure-results --clean-alluredir
 allure serve reports/allure-results
 ```
 
@@ -108,6 +110,17 @@ reports/eval_summary.csv
 ## Why `requests`
 
 The current system under test is local and mocked so the project runs without API keys. The `api/ExtractionApiClient` class shows the production boundary where `requests` can call a real extraction endpoint later. In production this client should add retries, timeouts, auth, richer error handling, and possibly `httpx` if async support is required.
+
+## Configuration
+
+Runtime options can be set through environment variables or an `.env` file. See `.env.example` for the full list.
+
+The total score uses a weighted blend:
+
+- `EVAL_DETERMINISTIC_SCORE_WEIGHT`, default `0.70`
+- `EVAL_JUDGE_SCORE_WEIGHT`, default `0.30`
+
+The defaults intentionally prioritize deterministic correctness and grounding checks while still giving the mock judge influence over ambiguity and hallucination-risk signals.
 
 ## Production Evolution
 

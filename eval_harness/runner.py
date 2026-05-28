@@ -1,5 +1,7 @@
 """Scenario runner for lease-expiration eval cases."""
 
+import time
+
 import allure
 from assertpy import assert_that
 from config.settings import Settings
@@ -21,6 +23,7 @@ class LeaseExpirationEvalRunner:
         self._judge = MockLLMJudge()
 
     def run_case(self, case: EvalCase) -> CaseEvaluationResult:
+        started_at = time.perf_counter()
         self._set_allure_metadata(case)
         trace_id: str
 
@@ -38,6 +41,7 @@ class LeaseExpirationEvalRunner:
                     {
                         "expected_value": case.expected_value,
                         "expected_citation_text": case.expected_citation_text,
+                        "expected_outcome_label": case.expected_outcome_label,
                         "expected_behavior": case.expected_behavior,
                     },
                 )
@@ -45,9 +49,11 @@ class LeaseExpirationEvalRunner:
             extraction = self.extract_value(case)
             rule_metrics = self.score_with_rules(case, extraction)
             judge = self.score_with_mock_judge(case, extraction)
-            result = self.build_result(case, extraction, rule_metrics, judge)
+            duration_ms = round((time.perf_counter() - started_at) * 1000, 3)
+            result = self.build_result(case, extraction, rule_metrics, judge, duration_ms)
             span.set_attribute("eval.total_score", result.total_score)
             span.set_attribute("eval.passed", result.passed)
+            span.set_attribute("eval.duration_ms", result.duration_ms)
 
             with allure.step("Attach eval scores"):
                 attach_json("scores", result.model_dump())
@@ -81,9 +87,14 @@ class LeaseExpirationEvalRunner:
         extraction: ExtractionResult,
         rule_metrics: list[RuleMetricResult],
         judge: JudgeResult,
+        duration_ms: float,
     ) -> CaseEvaluationResult:
         deterministic_score = sum(metric.score for metric in rule_metrics) / len(rule_metrics)
-        total_score = round((deterministic_score * 0.7) + (judge.score * 0.3), 3)
+        total_score = round(
+            (deterministic_score * self._settings.eval.deterministic_score_weight)
+            + (judge.score * self._settings.eval.judge_score_weight),
+            3,
+        )
         failed_critical_metrics = [metric.name for metric in rule_metrics if metric.critical and not metric.passed]
         passed = (
             not failed_critical_metrics
@@ -99,6 +110,7 @@ class LeaseExpirationEvalRunner:
             rule_metrics=rule_metrics,
             judge=judge,
             total_score=total_score,
+            duration_ms=duration_ms,
             passed=passed,
             failed_critical_metrics=failed_critical_metrics,
         )
@@ -134,6 +146,7 @@ class LeaseExpirationEvalRunner:
         allure.dynamic.title(case.title)
         allure.dynamic.description(self._allure_description(case))
         allure.dynamic.severity(self._severity_label(case.severity))
+        allure.dynamic.parameter("case", f"{case.id}: {case.title}")
 
     def _allure_description(self, case: EvalCase) -> str:
         expected_value = case.expected_value or "No value should be extracted"
@@ -143,9 +156,9 @@ class LeaseExpirationEvalRunner:
             f"{case.expected_behavior}\n\n"
             "**Expected outcome**\n\n"
             "- Field: Lease Expiration Date\n"
-            f"- Result: {self._readable_expected_outcome(case)}\n"
-            f"- Expected value: {expected_value}\n"
-            f"- Expected supporting text: {expected_citation}\n\n"
+            f"- Result: {case.expected_outcome_label}\n"
+            f"- Expected normalized value: {expected_value}\n"
+            f"- Expected source citation text: {expected_citation}\n\n"
             "**Why this matters**\n\n"
             f"{case.notes}\n\n"
             "**Quality signals reviewed**\n\n"
@@ -157,22 +170,6 @@ class LeaseExpirationEvalRunner:
             "- Mock judge rubric for grounding, reasoning, ambiguity, and hallucination risk"
         )
 
-    def _readable_expected_outcome(self, case: EvalCase) -> str:
-        title = case.title.lower()
-        if case.expected_value is None:
-            return "a null extraction"
-        if "amendment" in title:
-            return "the amendment override to be used"
-        if "conflicting" in title:
-            return "the final signed amendment to be used"
-        if "should be ignored" in title:
-            return "the decoy date to be ignored"
-        if "scanned" in title or "recognition errors" in title:
-            return "the expiration date from scanned text to be extracted"
-        if "multiple formats" in title:
-            return "the normalized expiration date"
-        return "the correct expiration date"
-
     def _human_readable_summary(self, case: EvalCase, result: CaseEvaluationResult) -> str:
         status = "PASSED" if result.passed else "FAILED"
         lines = [
@@ -182,12 +179,13 @@ class LeaseExpirationEvalRunner:
             f"Actual extracted value: {result.extraction.value or 'null'}",
             f"Confidence: {result.extraction.confidence}",
             f"Total score: {result.total_score}",
+            f"Runtime: {result.duration_ms} ms",
             "",
             "Deterministic checks:",
         ]
         for metric in result.rule_metrics:
             metric_status = "PASSED" if metric.passed else "FAILED"
-            lines.append(f"- {metric.name}: {metric_status}. {metric.reason}")
+            lines.append(f"- {metric.display_name}: {metric_status}. {metric.reason}")
 
         judge_status = "PASSED" if result.judge.passed else "FAILED"
         lines.extend(

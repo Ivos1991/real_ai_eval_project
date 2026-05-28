@@ -32,20 +32,7 @@ def _case_test_id(case: EvalCase) -> str:
 
 
 def _case_expected_outcome(case: EvalCase) -> str:
-    title = case.title.lower()
-    if case.expected_value is None:
-        return "null_extraction"
-    if "amendment" in title:
-        return "amendment_override_used"
-    if "conflicting" in title:
-        return "final_signed_amendment_used"
-    if "should be ignored" in title:
-        return "decoy_date_ignored"
-    if "scanned" in title or "recognition errors" in title:
-        return "scanned_text_date_extracted"
-    if "multiple formats" in title:
-        return "normalized_expiration_date"
-    return "correct_expiration_date"
+    return case.expected_outcome_slug
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
