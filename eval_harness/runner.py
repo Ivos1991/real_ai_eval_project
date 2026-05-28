@@ -1,6 +1,7 @@
 """Scenario runner for lease-expiration eval cases."""
 
 import time
+from html import escape
 
 import allure
 from assertpy import assert_that
@@ -154,31 +155,37 @@ class LeaseExpirationEvalRunner:
     # Adds readable Allure metadata for the current eval case.
     def _set_allure_metadata(self, case: EvalCase) -> None:
         allure.dynamic.title(case.title)
-        allure.dynamic.description(self._allure_description(case))
+        allure.dynamic.description_html(self._allure_description(case))
         allure.dynamic.severity(self._severity_label(case.severity))
         allure.dynamic.parameter("case", f"{case.id}: {case.title}")
 
-    # Builds the long-form Allure case description for domain reviewers.
+    # Builds the long-form HTML Allure case description for domain reviewers.
     def _allure_description(self, case: EvalCase) -> str:
         expected_value = case.expected_value or "No value should be extracted"
         expected_citation = case.expected_citation_text or "No citation should be returned"
         return (
-            "**What this case checks**\n\n"
-            f"{case.expected_behavior}\n\n"
-            "**Expected outcome**\n\n"
-            "- Field: Lease Expiration Date\n"
-            f"- Result: {case.expected_outcome_label}\n"
-            f"- Expected normalized value: {expected_value}\n"
-            f"- Expected source citation text: {expected_citation}\n\n"
-            "**Why this matters**\n\n"
-            f"{case.notes}\n\n"
-            "**Quality signals reviewed**\n\n"
-            "- Schema validity\n"
-            "- Normalized value correctness\n"
-            "- Citation presence and support\n"
-            "- Null handling where relevant\n"
-            "- Confidence range\n"
-            "- Mock judge rubric for grounding, reasoning, ambiguity, and hallucination risk"
+            "<section>"
+            "<h3>What this case checks</h3>"
+            f"<p>{escape(case.expected_behavior)}</p>"
+            "<h3>Expected outcome</h3>"
+            "<ul>"
+            "<li><strong>Field:</strong> Lease Expiration Date</li>"
+            f"<li><strong>Result:</strong> {escape(case.expected_outcome_label)}</li>"
+            f"<li><strong>Expected normalized value:</strong> {escape(expected_value)}</li>"
+            f"<li><strong>Expected source citation text:</strong> {escape(expected_citation)}</li>"
+            "</ul>"
+            "<h3>Why this matters</h3>"
+            f"<p>{escape(case.notes)}</p>"
+            "<h3>Quality signals reviewed</h3>"
+            "<ul>"
+            "<li>Schema validity</li>"
+            "<li>Normalized value correctness</li>"
+            "<li>Citation presence and support</li>"
+            "<li>Null handling where relevant</li>"
+            "<li>Confidence range</li>"
+            "<li>Mock judge rubric for grounding, reasoning, ambiguity, and hallucination risk</li>"
+            "</ul>"
+            "</section>"
         )
 
     # Builds a plain-text summary of the extraction and scoring outcome.
