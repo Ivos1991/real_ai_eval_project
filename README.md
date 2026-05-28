@@ -19,7 +19,7 @@ Requirement coverage:
 - Scores with an LLM-as-judge style metric: `MockLLMJudge`, implemented locally with a transparent rubric and no external calls.
 - Outputs a CI-friendly pass/fail signal: pytest fails on critical metric failures or low total score.
 - Produces reports: Allure evidence plus `reports/eval_summary.json` and `reports/eval_summary.csv`.
-- Includes lightweight observability: OpenTelemetry spans, with optional trace evidence attached to Allure.
+- Includes lightweight observability: OpenTelemetry spans, with telemetry evidence attached to Allure when enabled.
 - Documents next steps: see Production Evolution below.
 
 ## Problem Framing
@@ -51,7 +51,7 @@ pytest quality gate + Allure attachments
 reports/eval_summary.json and reports/eval_summary.csv
 ```
 
-OpenTelemetry spans wrap case loading, mock extraction, the optional API client boundary, deterministic scoring, mock judge scoring, and report generation. The default exporter writes traces to the console. The harness can also attach per-case trace evidence to Allure.
+OpenTelemetry spans wrap case loading, mock extraction, the optional API client boundary, deterministic scoring, mock judge scoring, and report generation. The default exporter writes traces to the console. The harness can also attach per-case telemetry evidence to Allure.
 
 Tests are split by purpose:
 
@@ -101,8 +101,9 @@ python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-a
 ```
 
 The GitHub Actions workflow runs all tests on every push and pull request. Manual workflow runs can choose `all`,
-`eval`, or `unit`, and can set the eval trace evidence mode. Generated Allure HTML is always uploaded as a workflow
-artifact. On manual runs and pushes to `master`, the report is also published to GitHub Pages.
+`eval`, or `unit`, and can set the eval evidence mode. Generated Allure HTML is always uploaded as a workflow
+artifact. On manual runs and pushes to `master`, the report is also published to GitHub Pages. The CI summary also
+prints the CI quality gate result and provides links for the Allure report and the artifact backup.
 
 The published report uses Allure single-file mode so the GitHub Pages version does not depend on separate runtime JSON
 fetches for individual test details. After a successful Pages deployment, the report is available at:
@@ -113,9 +114,19 @@ https://ivos1991.github.io/real_ai_eval_project/
 
 Trace evidence mode is controlled by `EVAL_TRACE_EVIDENCE_MODE`:
 
-- `failure_only` attaches per-case OpenTelemetry spans only for failed eval cases. This is the default and the CI setting.
-- `always` attaches trace JSON for every case, useful for local review.
-- `off` disables Allure trace attachments while keeping normal tracing available.
+- `failure_only` attaches per-case telemetry JSON only for failed eval cases. This is the default and the CI setting.
+- `always` attaches telemetry JSON for every case, useful for local review.
+- `off` disables Allure telemetry attachments while keeping normal tracing available.
+
+In full evidence mode, each case report includes:
+
+- Test description
+- Evaluation case attachments: `input_case`, `expected_output`, `actual_output`
+- Deterministic metric results: `rule_based_metrics`
+- Mock LLM judge result: `mock_llm_judge`
+- Final evaluation scores: `scores` and `human_readable_eval_summary`
+- Telemetry attachment: `telemetry`
+- Session-level evaluation summary: `eval_summary`
 
 Local example:
 
