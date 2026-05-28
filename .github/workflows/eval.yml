@@ -156,7 +156,7 @@ jobs:
             echo "- Test suite: \`${{ needs.test.outputs.test_suite }}\`"
             echo "- Evidence mode: \`${{ github.event.inputs.evidence_mode || vars.EVAL_TRACE_EVIDENCE_MODE || 'failure_only' }}\`"
             echo "- CI quality gate result: \`${quality_gate_result}\`"
-            echo "- Artifact report here: [here](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/)"
+            echo "- Allure report: [here](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/)"
             echo "- Artifact backup artifacts here: [here](${{ needs.test.outputs.allure_html_artifact_url }})"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -181,7 +181,7 @@ jobs:
             echo "- Test suite: \`${{ needs.test.outputs.test_suite }}\`"
             echo "- Evidence mode: \`${{ github.event.inputs.evidence_mode || vars.EVAL_TRACE_EVIDENCE_MODE || 'failure_only' }}\`"
             echo "- CI quality gate result: \`${quality_gate_result}\`"
-            echo "- Artifact report here: [here](${{ needs.test.outputs.allure_html_artifact_url }})"
+            echo "- Allure report: [here](${{ needs.test.outputs.allure_html_artifact_url }})"
             echo "- Artifact backup artifacts here: [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)"
             echo "- GitHub Pages deployment is skipped for pull request and non-master push runs."
           } >> "$GITHUB_STEP_SUMMARY"
