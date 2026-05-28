@@ -1,10 +1,9 @@
-"""Pandas-backed summary report generation."""
+"""Summary report generation for CI artifacts."""
 
+import csv
 import json
 from pathlib import Path
 from typing import Any
-
-import pandas as pd
 
 from eval_harness.models import CaseEvaluationResult
 from eval_harness.tracing import get_tracer
@@ -21,10 +20,21 @@ class EvalReportWriter:
             json_path = self._report_dir / "eval_summary.json"
             csv_path = self._report_dir / "eval_summary.csv"
             json_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
-            pd.DataFrame([summary]).to_csv(csv_path, index=False)
+            self._write_summary_csv(csv_path, summary)
             span.set_attribute("report.json_path", str(json_path))
             span.set_attribute("report.csv_path", str(csv_path))
             return summary
+
+    def _write_summary_csv(self, csv_path: Path, summary: dict[str, Any]) -> None:
+        with csv_path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=list(summary.keys()))
+            writer.writeheader()
+            writer.writerow(
+                {
+                    key: json.dumps(value, sort_keys=True) if isinstance(value, dict | list) else value
+                    for key, value in summary.items()
+                }
+            )
 
     def _build_summary(self, results: list[CaseEvaluationResult]) -> dict[str, Any]:
         total_cases = len(results)
@@ -52,7 +62,9 @@ class EvalReportWriter:
             )
             for metric_name in metric_names
         }
-        metric_pass_rates["mock_llm_judge"] = round(sum(result.judge.passed for result in results) / total_cases, 3)
+        metric_pass_rates["mock_llm_judge"] = (
+            round(sum(result.judge.passed for result in results) / total_cases, 3) if total_cases else 0.0
+        )
 
         return {
             "total_cases": total_cases,

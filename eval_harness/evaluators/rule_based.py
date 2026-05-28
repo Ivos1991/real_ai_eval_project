@@ -78,7 +78,10 @@ class RuleBasedEvaluator:
             )
 
         expected_citation = case.expected_citation_text or ""
-        best_similarity = max((fuzz.token_set_ratio(expected_citation, citation) for citation in extraction.citations), default=0)
+        best_similarity = max(
+            (fuzz.token_set_ratio(expected_citation, citation) for citation in extraction.citations),
+            default=0,
+        )
         expected_value = normalize_date(case.expected_value)
         actual_value = normalize_date(extraction.value)
         value_matches = expected_value == actual_value

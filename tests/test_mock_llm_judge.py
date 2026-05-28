@@ -1,7 +1,7 @@
 """Focused tests for the local rubric-based mock judge."""
 
-from assertpy import assert_that
 import pytest
+from assertpy import assert_that
 
 from eval_harness.evaluators.mock_llm_judge import MockLLMJudge
 from eval_harness.models import EvalCase, ExtractionResult

@@ -8,8 +8,13 @@ from typing import Any
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor, SpanExporter
-from opentelemetry.sdk.trace.export import SpanExportResult
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+    SpanExporter,
+    SpanExportResult,
+)
 
 
 class InMemorySpanExporter(SpanExporter):

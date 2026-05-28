@@ -18,7 +18,7 @@ def _to_bool(value: str | None, default: bool) -> bool:
 
 def _trace_evidence_mode(value: str | None) -> TraceEvidenceMode:
     raw = (value or "failure_only").strip().lower()
-    aliases = {
+    aliases: dict[str, TraceEvidenceMode] = {
         "always": "always",
         "all": "always",
         "failure": "failure_only",
@@ -29,7 +29,7 @@ def _trace_evidence_mode(value: str | None) -> TraceEvidenceMode:
         "none": "off",
     }
     try:
-        return aliases[raw]  # type: ignore[return-value]
+        return aliases[raw]
     except KeyError as error:
         raise ValueError("EVAL_TRACE_EVIDENCE_MODE must be one of: always, failure_only, off") from error
 

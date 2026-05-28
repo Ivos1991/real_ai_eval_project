@@ -1,7 +1,7 @@
 """Focused tests for deterministic lease-expiration metrics."""
 
-from assertpy import assert_that
 import pytest
+from assertpy import assert_that
 
 from eval_harness.evaluators.rule_based import RuleBasedEvaluator
 from eval_harness.models import EvalCase, ExtractionResult
