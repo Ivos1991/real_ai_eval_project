@@ -80,11 +80,23 @@ Expected field values are normalized to ISO date format for scoring. Citation te
 Pytest acts as the quality gate. A failing critical metric, failing mock judge, or total score below the configured threshold causes a non-zero pytest exit code.
 
 ```powershell
-pip install -r requirements.txt
-pytest
-pytest -m eval --alluredir=reports/allure-results --clean-alluredir
-allure serve reports/allure-results
+python -m pip install -e .[dev]
+python -m pytest
+python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-alluredir
+allure generate reports/allure-results --clean -o reports/allure-report
+allure open reports/allure-report
 ```
+
+Focused local suites:
+
+```powershell
+python -m pytest tests/unit -m unit
+python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-alluredir
+```
+
+The GitHub Actions workflow runs all tests on every push and pull request. Manual workflow runs can choose `all`,
+`eval`, or `unit`, and can set the eval trace evidence mode. Generated Allure HTML is always uploaded as a workflow
+artifact. On manual runs and pushes to `master`, the report is also published to GitHub Pages.
 
 Trace evidence mode is controlled by `EVAL_TRACE_EVIDENCE_MODE`:
 
@@ -96,8 +108,9 @@ Local example:
 
 ```powershell
 $env:EVAL_TRACE_EVIDENCE_MODE="always"
-pytest -m eval --alluredir=reports/allure-results --clean-alluredir
-allure serve reports/allure-results
+python -m pytest tests/eval -m eval --alluredir=reports/allure-results --clean-alluredir
+allure generate reports/allure-results --clean -o reports/allure-report
+allure open reports/allure-report
 ```
 
 Summary files are written to:

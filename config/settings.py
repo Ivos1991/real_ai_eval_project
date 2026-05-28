@@ -10,15 +10,17 @@ from dotenv import load_dotenv
 TraceEvidenceMode = Literal["always", "failure_only", "off"]
 
 
+# Converts common environment-variable truthy strings into a boolean.
 def _to_bool(value: str | None, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# Normalizes supported trace-evidence aliases into the configured mode.
 def _trace_evidence_mode(value: str | None) -> TraceEvidenceMode:
     raw = (value or "failure_only").strip().lower()
-    aliases = {
+    aliases: dict[str, TraceEvidenceMode] = {
         "always": "always",
         "all": "always",
         "failure": "failure_only",
@@ -29,7 +31,7 @@ def _trace_evidence_mode(value: str | None) -> TraceEvidenceMode:
         "none": "off",
     }
     try:
-        return aliases[raw]  # type: ignore[return-value]
+        return aliases[raw]
     except KeyError as error:
         raise ValueError("EVAL_TRACE_EVIDENCE_MODE must be one of: always, failure_only, off") from error
 
@@ -47,10 +49,12 @@ class EvalSettings:
 class ReportingSettings:
     report_dir: Path
 
+    # Returns the JSON summary report path.
     @property
     def summary_json_path(self) -> Path:
         return self.report_dir / "eval_summary.json"
 
+    # Returns the CSV summary report path.
     @property
     def summary_csv_path(self) -> Path:
         return self.report_dir / "eval_summary.csv"
@@ -76,6 +80,7 @@ class Settings:
     tracing: TracingSettings
     api: ApiSettings
 
+    # Builds typed settings from environment variables and optional .env values.
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()

@@ -1,12 +1,13 @@
 """Focused tests for deterministic lease-expiration metrics."""
 
-from assertpy import assert_that
 import pytest
+from assertpy import assert_that
 
 from eval_harness.evaluators.rule_based import RuleBasedEvaluator
 from eval_harness.models import EvalCase, ExtractionResult
 
 
+# Verifies that all deterministic metrics pass for a grounded exact match.
 @pytest.mark.unit
 def test_rule_based_evaluator_expects_all_metrics_to_pass_for_grounded_match() -> None:
     case = EvalCase(
@@ -35,6 +36,7 @@ def test_rule_based_evaluator_expects_all_metrics_to_pass_for_grounded_match() -
     ).is_empty()
 
 
+# Verifies that invented values fail the expected null-handling checks.
 @pytest.mark.unit
 def test_rule_based_evaluator_expects_null_case_to_fail_when_value_is_invented() -> None:
     case = EvalCase(
